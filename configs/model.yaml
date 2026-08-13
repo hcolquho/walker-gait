@@ -1,0 +1,40 @@
+# ─── Model Configuration ───
+
+backbone:
+  # HuggingFace model ID — vitpose-plus variants use MoE expert heads
+  # Options: vitpose-plus-small / -base / -large / -huge
+  # For offline SHARCNET processing, -large is the sweet spot (77.1 foot AP).
+  # Use -huge (77.9 foot AP) if compute budget allows.
+  name: "usyd-community/vitpose-plus-large"
+
+  # MoE dataset expert index:
+  #   0 = COCO-17, 1 = AIC, 2 = MPII, 3 = AP-10K, 4 = APT-36K
+  #   5 = COCO-WholeBody (133 keypoints) ← this is ours
+  dataset_index: 5
+
+  # Input resolution expected by the model (H, W)
+  input_size: [256, 192]
+
+# ─── Fine-tuning freeze strategy ───
+freeze:
+  backbone: true        # freeze ViT backbone (only decoder head trains)
+  # With <500 annotated frames, freezing the backbone is strongly recommended.
+  # Unfreeze last N transformer blocks only if you have 1000+ annotated frames.
+  unfreeze_last_n_blocks: 0
+
+# ─── Heatmap / loss ───
+heatmap:
+  sigma: 2.0            # Gaussian spread for target heatmaps
+  # Output heatmap size is determined by model (input_size / 4 for simple decoder)
+  # For 256x192 input → 64x48 heatmap output
+
+loss:
+  type: mse             # KeypointMSELoss equivalent
+  use_visibility_mask: true  # zero out loss for unlabeled keypoints
+
+# ─── Detector (for top-down crop at inference) ───
+detector:
+  name: "PekingU/rtdetr_r50vd_coco_o365"
+  person_threshold: 0.3
+  # Since there's only one walker user in frame, take top-1 detection by score
+  max_persons: 1

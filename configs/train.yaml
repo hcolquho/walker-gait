@@ -1,0 +1,47 @@
+# ─── Training Configuration ───
+
+optimizer:
+  type: AdamW
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+
+scheduler:
+  type: cosine
+  warmup_epochs: 2
+  min_lr: 1.0e-6
+
+training:
+  epochs: 30
+  batch_size: 16         # reduce if GPU OOM; 8 is safe for most single-GPU setups
+  num_workers: 4
+  val_interval: 2        # validate every N epochs
+  save_best_metric: pck  # or "loss"
+  early_stop_patience: 8
+
+augmentation:
+  random_flip: true
+  flip_pairs:            # left↔right pairs (our 12-keypoint indices)
+    - [0, 1]             # left_hip ↔ right_hip
+    - [2, 3]             # left_knee ↔ right_knee
+    - [4, 5]             # left_ankle ↔ right_ankle
+    - [6, 9]             # left_big_toe ↔ right_big_toe
+    - [7, 10]            # left_small_toe ↔ right_small_toe
+    - [8, 11]            # left_heel ↔ right_heel
+  random_rotation: 30    # degrees, ±
+  random_scale: [0.75, 1.25]
+
+evaluation:
+  pck_threshold: 0.05    # PCK@0.05 (fraction of bbox diagonal)
+
+checkpoint:
+  dir: checkpoints
+  save_last: true
+  save_best: true
+
+# ─── SLURM (SHARCNET) ───
+slurm:
+  partition: gpu
+  gres: "gpu:1"
+  time: "06:00:00"
+  mem: "32G"
+  cpus_per_task: 4
