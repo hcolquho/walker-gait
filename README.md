@@ -87,5 +87,3 @@ We use 12 keypoints extracted from the 133-point COCO-WholeBody skeleton:
 - **Walker**: Evolution Mini Trillium rollator
 - **Camera**: Orbbec Femto Bolt (WFOV 120°×120°, iToF depth)
 - **Mount**: SmallRig 4862 super clamp + magic arm, bar below seat
-- **IMU**: BNO085 (mid-height rear uprights)
-- **FSR**: Interlink UX 408 strips (handles)
