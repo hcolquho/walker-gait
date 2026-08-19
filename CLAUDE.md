@@ -232,9 +232,13 @@ pipeline.start(config)
 
 ## Known Issues / TODOs
 
-- `smooth.py` not yet built — needed before gait event detection can run
-- `process_session.py` not yet built — needed to chain full pipeline on SHARCNET
 - Camera tilt angle and floor offset not yet calibrated — needed for `world_from_camera()`
 - Fine-tuning not yet done — first processing pass will use pretrained ViTPose++ weights
 - Timestamp count occasionally fewer than frame count (~86 row gap) — harmless, missing rows are always in the discard zone
 - ArUco timing mark detection unreliable with moving camera (motion blur) — replaced by manual Q-press method
+
+`smooth.py` and `process_session.py` are built. `kalman_fill_gaps()` runs a real
+constant-velocity Kalman filter per (keypoint, axis) and predicts through NaN
+gaps up to `max_gap_frames`; longer gaps (and leading NaNs before the first
+observation) are left as NaN rather than filled. `filterpy` is not a dependency —
+the filter is implemented directly with numpy.

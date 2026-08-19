@@ -4,29 +4,70 @@ import numpy as np
 from scipy.signal import butter, filtfilt
 
 
-# Kalman filter for smoothing 3D keypoint trajectories
+def _kalman_fill_1d(
+    series: np.ndarray,
+    max_gap_frames: int,
+    process_var: float = 1e-2,
+    measurement_var: float = 1.0,
+) -> np.ndarray:
+    """Constant-velocity Kalman filter over a single 1D series (one keypoint,
+    one coordinate axis). Predicts through NaN runs up to `max_gap_frames`
+    long; longer runs, and any leading NaNs before the first observation,
+    are left as NaN."""
+    T = len(series)
+    filled = series.copy()
+    observed = ~np.isnan(series)
+    if observed.sum() < 2:
+        return filled
+
+    dt = 1.0
+    F = np.array([[1.0, dt], [0.0, 1.0]])
+    H = np.array([[1.0, 0.0]])
+    Q = np.eye(2) * process_var
+    R = np.array([[measurement_var]])
+    I = np.eye(2)
+
+    start = int(np.argmax(observed))
+    x = np.array([series[start], 0.0])
+    P = np.eye(2)
+
+    gap_len = 0
+    for t in range(start, T):
+        x = F @ x
+        P = F @ P @ F.T + Q
+
+        if observed[t]:
+            gap_len = 0
+            innovation = series[t] - (H @ x)[0]
+            S = (H @ P @ H.T + R)[0, 0]
+            K = (P @ H.T).flatten() / S
+            x = x + K * innovation
+            P = (I - np.outer(K, H)) @ P
+            filled[t] = x[0]
+        else:
+            gap_len += 1
+            filled[t] = x[0] if gap_len <= max_gap_frames else np.nan
+
+    return filled
+
+
 def kalman_fill_gaps(keypoints_3d: np.ndarray, max_gap_frames: int = 10) -> np.ndarray:
     """
     For each keypoint, fill NaN gaps up to max_gap_frames using
-    a constant-velocity Kalman filter prediction.
+    a constant-velocity Kalman filter prediction. Gaps longer than
+    max_gap_frames (and leading NaNs before the first observation)
+    are left as NaN.
     keypoints_3d: (T, K, 3)
     """
-    T, K, _ = keypoints_3d.shape
+    _, K, D = keypoints_3d.shape
     filled = keypoints_3d.copy()
 
     for k in range(K):
-        traj = keypoints_3d[:, k, :]  # (T, 3)
-        # find NaN gaps and fill with linear interpolation first
-        for dim in range(3):
-            series = traj[:, dim]
-            nans = np.isnan(series)
-            if nans.any() and (~nans).sum() > 1:
-                valid_idx = np.where(~nans)[0]
-                filled[:, k, dim] = np.interp(
-                    np.arange(T), valid_idx, series[valid_idx]
-                )
-        # then apply Kalman smoothing on the filled trajectory
-        # (filterpy implementation here)
+        for dim in range(D):
+            filled[:, k, dim] = _kalman_fill_1d(
+                keypoints_3d[:, k, dim], max_gap_frames=max_gap_frames
+            )
+
     return filled
 
 
