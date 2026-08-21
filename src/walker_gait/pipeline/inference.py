@@ -142,7 +142,9 @@ class WalkerGaitPipeline:
         ).to(self.device)
 
         n_crops = inputs["pixel_values"].shape[0]
-        outputs = self.pose_model(**inputs)
+        dataset_index = torch.zeros(inputs["pixel_values"].shape[0], 
+                                    dtype=torch.long, device=self.device)
+        outputs = self.pose_model(**inputs, dataset_index=dataset_index)
 
         # Decode directly from heatmaps to get all 133 keypoints
         # post_process_pose_estimation defaults to 17 (COCO body) — bypass it
