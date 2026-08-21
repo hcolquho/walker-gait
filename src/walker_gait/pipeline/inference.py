@@ -149,15 +149,30 @@ class WalkerGaitPipeline:
 
         outputs = self.pose_model(**inputs, dataset_index=dataset_index)
 
-        pose_results = self.pose_processor.post_process_pose_estimation(
-            outputs, boxes=[boxes_xywh]
-        )[0]
+        # Decode directly from heatmaps to get all 133 keypoints
+        # post_process_pose_estimation defaults to 17 (COCO body) — bypass it
+        heatmaps = outputs.heatmaps  # (N, 133, H, W)
+        N, K, H, W = heatmaps.shape
 
         all_kpts = []
         all_scores = []
-        for person in pose_results:
-            kpts = person["keypoints"].cpu().numpy()   # (133, 2)
-            scores = person["scores"].cpu().numpy()    # (133,)
+        for i in range(N):
+            hm = heatmaps[i]  # (133, H, W)
+
+            # Argmax decoding
+            flat = hm.view(K, -1)
+            max_vals, max_idx = flat.max(dim=1)
+            x = (max_idx % W).float() / W
+            y = (max_idx // W).float() / H
+
+            # Scale back to input image coordinates
+            box = torch.tensor(boxes_xywh[i], dtype=torch.float32, device=self.device)
+            x_img = x * box[2] + box[0]
+            y_img = y * box[3] + box[1]
+
+            kpts = torch.stack([x_img, y_img], dim=1).cpu().numpy()  # (133, 2)
+            scores = torch.sigmoid(max_vals).cpu().numpy()            # (133,)
+
             all_kpts.append(kpts[COCO_WB_INDICES])
             all_scores.append(scores[COCO_WB_INDICES])
 
