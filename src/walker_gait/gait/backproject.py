@@ -70,13 +70,16 @@ def backproject_sequence(
 
     world = np.full((T, K, 3), np.nan, dtype=np.float64)
 
+    # Loop over frames and keypoints, backprojecting valid ones to 3D world coordinates.
     for t in range(T):
         depth_frame = depth_frames[t]
         for k in range(K):
             u, v, score = keypoints_2d[t, k]
             if np.isnan(score) or score < score_threshold:
                 continue
-            ui, vi = int(round(u)), int(round(v))
+            if np.isnan(u) or np.isnan(v):
+                continue
+            ui, vi = int(round(u)), int(round(v)))
             if not (0 <= ui < W and 0 <= vi < H):
                 continue
             depth_mm = float(depth_frame[vi, ui])
