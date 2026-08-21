@@ -31,10 +31,8 @@ from walker_gait.gait import (
     compute_gait_metrics,
     detect_gait_events,
     smooth_keypoint_sequence,
-    world_from_camera,
-    KEYPOINT_NAMES,
+    KEYPOINT_NAMES
 )
-from walker_gait.gait.backproject import load_intrinsics
 
 
 def load_keypoints_2d(keypoints_json_path: Path) -> tuple[np.ndarray, list[str]]:
@@ -157,16 +155,19 @@ def main():
     print(f"Depth frames loaded: {depth_frames.shape}")
 
     # ── Load intrinsics ───────────────────────────────────────────────────────
-    intrinsics = load_intrinsics(session_dir / "intrinsics.json")
-
-    # ── Backproject to 3D camera coordinates ─────────────────────────────────
+    with open(session_dir / "intrinsics.json") as f:
+        intrinsics = json.load(f)
     print("Backprojecting to 3D...")
-    keypoints_3d_cam = backproject_sequence(keypoints_2d, depth_frames, intrinsics)
 
-    # ── Convert to world frame ────────────────────────────────────────────────
-    keypoints_3d = world_from_camera(
-        keypoints_3d_cam,
-        camera_tilt_deg=args.tilt_deg,
+    # Add dummy score column — backproject_sequence expects (T, K, 3)
+    scores = np.ones((*keypoints_2d.shape[:2], 1), dtype=np.float32)
+    keypoints_2d_scored = np.concatenate([keypoints_2d, scores], axis=2)
+
+    keypoints_3d = backproject_sequence(
+        keypoints_2d_scored,
+        depth_frames,
+        intrinsics,
+        tilt_deg=args.tilt_deg,
         floor_offset_mm=args.floor_offset_mm,
     )
     print(f"3D keypoints shape: {keypoints_3d.shape}")
