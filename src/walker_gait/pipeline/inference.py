@@ -17,15 +17,15 @@ from transformers import (
     VitPoseForPoseEstimation,
 )
 
-# Our 12-keypoint subset
-COCO_WB_INDICES = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
-COCO_WHOLEBODY_DATASET_INDEX = 5
+# Using standard COCO-17 body keypoints (wholebody not available in this checkpoint)
+# Feet keypoints (toes/heels) not available — will be added after wholebody fine-tuning
+COCO_WB_INDICES = [11, 12, 13, 14, 15, 16]
+COCO_WHOLEBODY_DATASET_INDEX = 0  # 0 = standard COCO body
 
 KEYPOINT_NAMES = [
-    "left_hip", "right_hip", "left_knee", "right_knee",
+    "left_hip", "right_hip",
+    "left_knee", "right_knee",
     "left_ankle", "right_ankle",
-    "left_big_toe", "left_small_toe", "left_heel",
-    "right_big_toe", "right_small_toe", "right_heel",
 ]
 
 
@@ -142,12 +142,7 @@ class WalkerGaitPipeline:
         ).to(self.device)
 
         n_crops = inputs["pixel_values"].shape[0]
-        dataset_index = torch.full(
-            (n_crops,), COCO_WHOLEBODY_DATASET_INDEX,
-            dtype=torch.long, device=self.device,
-        )
-
-        outputs = self.pose_model(**inputs, dataset_index=dataset_index)
+        outputs = self.pose_model(**inputs)
 
         # Decode directly from heatmaps to get all 133 keypoints
         # post_process_pose_estimation defaults to 17 (COCO body) — bypass it
