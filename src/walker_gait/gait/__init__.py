@@ -8,7 +8,6 @@ from .metrics import GaitMetrics, compute_gait_metrics
 __all__ = [
     "backproject_sequence",
     "pixel_to_camera",
-    "world_from_camera",
     "kalman_fill_gaps",
     "butterworth_smooth",
     "smooth_keypoint_sequence",
