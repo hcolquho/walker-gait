@@ -56,7 +56,7 @@ def main():
     # Find images
     image_extensions = {".png", ".jpg", ".jpeg", ".bmp"}
     image_paths = sorted(
-        p for p in input_dir.iterdir()
+        p for p in (input_dir/"color").iterdir()
         if p.suffix.lower() in image_extensions
     )
     print(f"Found {len(image_paths)} images in {input_dir}")
