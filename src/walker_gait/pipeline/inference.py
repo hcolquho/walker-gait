@@ -184,6 +184,8 @@ class WalkerGaitPipeline:
         )
 
     def __call__(self, image: Image.Image) -> PoseResult:
-        """Full pipeline: detect → pose → filter."""
-        boxes = self.detect_persons(image)
+        """Full pipeline: use full frame as bbox → pose → filter."""
+        # Skip detector — camera always shows one person hips-to-floor
+        w, h = image.size
+        boxes = np.array([[0, 0, w, h]], dtype=np.float32)  # full frame [x,y,w,h]
         return self.estimate_pose(image, boxes)
