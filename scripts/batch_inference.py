@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Batch inference on recorded frames/video.
+Batch inference on all recorded trials.
 
-Runs the full pipeline (detect → pose → extract 12 keypoints) on all
-frames in an input directory and saves results as a JSON file.
+Recursively finds all trial folders under --input, runs pose inference
+on each trial's color/ frames, and saves keypoints.json inside each trial folder.
 
 Usage:
     python scripts/batch_inference.py \
-        --input data/frames/ \
-        --output results/session_001.json \
-        --checkpoint checkpoints/best
+        --input data/han/ \
+        --model usyd-community/vitpose-plus-large
 """
 
 import argparse
@@ -17,7 +16,6 @@ import json
 import sys
 from pathlib import Path
 
-import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
@@ -26,44 +24,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from walker_gait.pipeline import WalkerGaitPipeline
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Batch pose inference")
-    parser.add_argument("--input", type=str, required=True,
-                        help="Directory of frame images")
-    parser.add_argument("--output", type=str, required=True,
-                        help="Output JSON path")
-    parser.add_argument("--checkpoint", type=str, default=None,
-                        help="Fine-tuned checkpoint dir (or None for pretrained)")
-    parser.add_argument("--model", type=str,
-                        default="usyd-community/vitpose-plus-large")
-    parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--threshold", type=float, default=0.3,
-                        help="Detection confidence threshold")
-    args = parser.parse_args()
+def find_trial_dirs(root: Path) -> list[Path]:
+    """Recursively find all trial folders (contain a color/ subfolder)."""
+    return sorted(p.parent for p in root.rglob("color") if p.is_dir())
 
-    input_dir = Path(args.input)
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Initialize pipeline
-    pipeline = WalkerGaitPipeline(
-        pose_model_name=args.model,
-        pose_checkpoint=args.checkpoint,
-        device=args.device,
-        person_threshold=args.threshold,
-    )
+def process_trial(trial_dir: Path, pipeline: WalkerGaitPipeline) -> int:
+    """Run inference on one trial folder, save keypoints.json. Returns frame count."""
+    color_dir = trial_dir / "color"
+    output_path = trial_dir / "keypoints.json"
 
-    # Find images
-    image_extensions = {".png", ".jpg", ".jpeg", ".bmp"}
+    # Skip if already done
+    if output_path.exists():
+        print(f"  [SKIP] {trial_dir.name} — keypoints.json already exists")
+        return 0
+
+    image_extensions = {".jpg", ".jpeg", ".png"}
     image_paths = sorted(
-        p for p in (input_dir/"color").iterdir()
+        p for p in color_dir.iterdir()
         if p.suffix.lower() in image_extensions
     )
-    print(f"Found {len(image_paths)} images in {input_dir}")
 
-    # Process
+    if not image_paths:
+        print(f"  [WARN] No images in {color_dir}")
+        return 0
+
     results = []
-    for img_path in tqdm(image_paths, desc="Inference"):
+    for img_path in tqdm(image_paths, desc=f"  {trial_dir.name}", leave=False):
         image = Image.open(img_path).convert("RGB")
         pose = pipeline(image)
 
@@ -88,11 +75,49 @@ def main():
 
         results.append(frame_result)
 
-    # Save
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"Saved {len(results)} frame results to {output_path}")
+    return len(results)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Batch pose inference on all trials")
+    parser.add_argument("--input",      type=str, required=True,
+                        help="Root data directory (e.g. data/han/)")
+    parser.add_argument("--checkpoint", type=str, default=None,
+                        help="Fine-tuned checkpoint dir (or None for pretrained)")
+    parser.add_argument("--model",      type=str,
+                        default="usyd-community/vitpose-plus-large")
+    parser.add_argument("--device",     type=str, default="cuda")
+    args = parser.parse_args()
+
+    input_dir = Path(args.input)
+
+    # Find all trial folders
+    trial_dirs = find_trial_dirs(input_dir)
+    print(f"Found {len(trial_dirs)} trial folders under {input_dir}\n")
+
+    if not trial_dirs:
+        print("No trial folders found. Check that color/ subfolders exist.")
+        return
+
+    # Initialize pipeline once
+    pipeline = WalkerGaitPipeline(
+        pose_model_name=args.model,
+        pose_checkpoint=args.checkpoint,
+        device=args.device,
+    )
+
+    # Process each trial
+    total_frames = 0
+    for i, trial_dir in enumerate(trial_dirs, 1):
+        print(f"[{i}/{len(trial_dirs)}] {trial_dir.relative_to(input_dir)}")
+        n = process_trial(trial_dir, pipeline)
+        total_frames += n
+        print(f"  → {n} frames saved to keypoints.json")
+
+    print(f"\nDone. {total_frames} total frames processed across {len(trial_dirs)} trials.")
 
 
 if __name__ == "__main__":
