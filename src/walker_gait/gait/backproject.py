@@ -79,7 +79,7 @@ def backproject_sequence(
                 continue
             if np.isnan(u) or np.isnan(v):
                 continue
-            ui, vi = int(round(u)), int(round(v)))
+            ui, vi = int(round(u)), int(round(v))
             if not (0 <= ui < W and 0 <= vi < H):
                 continue
             depth_mm = float(depth_frame[vi, ui])
