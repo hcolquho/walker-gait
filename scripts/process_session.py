@@ -182,18 +182,18 @@ def main():
         keypoints_3d,
         fps=fps,
     )
-    
-    print(f"  Left heel strikes : {len(events.left_heel_strikes)}")
-    print(f"  Right heel strikes: {len(events.right_heel_strikes)}")
-    print(f"  Left toe-offs     : {len(events.left_toe_offs)}")
-    print(f"  Right toe-offs    : {len(events.right_toe_offs)}")
+
+    print(f"  Left heel strikes : {len(events.left.heel_strikes)}")
+    print(f"  Right heel strikes: {len(events.right.heel_strikes)}")
+    print(f"  Left toe-offs     : {len(events.left.toe_offs)}")
+    print(f"  Right toe-offs    : {len(events.right.toe_offs)}")
 
     # ── Gait metrics ──────────────────────────────────────────────────────────
     print("Computing gait metrics...")
     metrics = compute_gait_metrics(
         events,
         keypoints_3d,
-        bout_duration_s=float(timestamps[-1] - timestamps[0]),
+        fps=fps,
     )
 
     # ── Save ──────────────────────────────────────────────────────────────────
