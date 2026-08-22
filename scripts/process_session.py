@@ -181,8 +181,8 @@ def main():
     events = detect_gait_events(
         keypoints_3d,
         fps=fps,
-        timestamps=timestamps,
     )
+    
     print(f"  Left heel strikes : {len(events.left_heel_strikes)}")
     print(f"  Right heel strikes: {len(events.right_heel_strikes)}")
     print(f"  Left toe-offs     : {len(events.left_toe_offs)}")
