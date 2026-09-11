@@ -10,19 +10,19 @@ this project — do not optimize for speed.
 
 ---
 
-## Handoff status
+## Current status
 
-**Read this section first.** It is the honest state of the project, not the plan.
+**Current state of the project (not the plan)
 
 | Stage | Status |
 |---|---|
-| Data collection | ✅ **Done.** 120 trials across 3 sessions recorded and verified |
-| Pose inference on the recorded data | ✅ **Done.** All 120 trials have `keypoints.json` — but see blocker #1: inference used COCO-17 body-only (6 keypoints, `dataset_index=0`), not wholebody. Files will need to be regenerated after fixing the model. |
-| Keypoint annotation | ❌ **Not started.** `data/annotations/` is empty |
-| Fine-tuning | ❌ **Not done.** `checkpoints/` is empty; no trained weights exist |
-| Gait module (backproject → smooth → events → metrics) | ✅ **Written and unit-tested.** 18/18 tests pass |
-| Gait module validated on real data | ⚠️ **Partially.** `process_session.py` runs end to end on a real trial and writes `gait_metrics.json`, but all metrics return NaN — see blockers #1 and #3 |
-| Camera extrinsic calibration (tilt, floor offset) | ❌ **Not measured.** Current values are guesses |
+| Data collection | **Done.** 120 trials across 3 sessions recorded and verified |
+| Pose inference on the recorded data | **Done.** All 120 trials have `keypoints.json` — but see blocker #1: inference used COCO-17 body-only (6 keypoints, `dataset_index=0`), not wholebody. Files will need to be regenerated after fixing the model. |
+| Keypoint annotation | **Not started.** `data/annotations/` is empty |
+| Fine-tuning | **Not done.** `checkpoints/` is empty; no trained weights exist |
+| Gait module (backproject → smooth → events → metrics) | **Written and unit-tested.** 18/18 tests pass |
+| Gait module validated on real data | **Partially.** `process_session.py` runs end to end on a real trial and writes `gait_metrics.json`, but all metrics return NaN — see blockers #1 and #3 |
+| Camera extrinsic calibration (tilt, floor offset) | **Not measured.** Current values are guesses |
 
 The pipeline has been run end to end on one trial. It does not crash. It produces NaN
 metrics. The reasons are known and documented in the blockers below.
